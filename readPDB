@@ -1,0 +1,92 @@
+class PDBAtom:
+
+  def  init (self, line):
+
+    """Parse ATOM/HETATM record from PDB file""" self.record_type = line[0:6].strip()
+    self.atom_number = int(line[6:11]) self.atom_name = line[12:16].strip() self.alt_loc = line[16].strip()
+    self.residue_name = line[17:20].strip() self.chain_id = line[21].strip()
+    self.residue_number = int(line[22:26]) self.x = float(line[30:38])
+    self.y = float(line[38:46]) self.z = float(line[46:54])
+    self.occupancy = float(line[54:60]) self.temp_factor = float(line[60:66]) self.element = line[76:78].strip()
+
+
+  def   str  (self):
+
+    return f"{self.record_type} {self.atom_name} {self.residue_name}
+{self.chain_id} {self.residue_number} ({self.x}, {self.y}, {self.z})"
+
+
+
+class PDBStructure: 
+  def  init (self):
+    self.atoms = []
+    self.header = {} 
+    self.title = ""
+
+  def read_pdb(self, filename):
+    """Read and parse a PDB file""" 
+    try:
+      with open(filename, 'r') as file: 
+        for line in file:
+          if line.startswith(('ATOM', 'HETATM')): 
+            atom = PDBAtom(line)
+            self.atoms.append(atom) 
+          elif line.startswith('HEADER'):
+            self.header['classification'] = line[10:50].strip() 
+            self.header['date'] = line[50:59].strip() 
+            self.header['id'] = line[62:66].strip()
+          elif line.startswith('TITLE'): 
+            self.title += line[10:80].strip()
+
+      print(f"Successfully read {len(self.atoms)} atoms from {filename}")
+
+    except FileNotFoundError:
+      print(f"Error: File {filename} not found") 
+    except Exception as e:
+      print(f"Error reading PDB file: {str(e)}")
+ 
+def get_chains(self):
+  """Return list of unique chain IDs"""
+  return sorted(list(set(atom.chain_id for atom in self.atoms)))
+
+def get_residues(self):
+  """Return list of unique residue names"""
+  return sorted(list(set(atom.residue_name for atom in self.atoms)))
+
+def get_atoms_by_chain(self, chain_id):
+  """Return all atoms in specified chain"""
+  return [atom for atom in self.atoms if atom.chain_id == chain_id]
+
+def get_atom_coordinates(self):
+  """Return list of coordinates for all atoms"""
+  return [(atom.x, atom.y, atom.z) for atom in self.atoms]
+
+def print_structure_info(self):
+  """Print basic information about the structure""" 
+  print(f"Structure ID: {self.header.get('id', 'N/A')}")
+  print(f"Classification: {self.header.get('classification', 'N/A')}") 
+  print(f"Title: {self.title}")
+  print(f"Number of atoms: {len(self.atoms)}") 
+  print(f"Chains: {', '.join(self.get_chains())}")
+   print(f"Unique residues: {', '.join(self.get_residues())}")
+
+# Example usage
+if   name	== "  main  ":
+  # Create a new PDB structure object 
+  structure = PDBStructure()
+
+  # Read a PDB file (example with 1ABC.pdb) 
+  structure.read_pdb("1ABC.pdb")
+
+  # Print structure information 
+  structure.print_structure_info()
+
+  # Example of accessing specific information 
+  print("\nFirst 5 atoms:")
+  for atom in structure.atoms[:5]: 
+    print(atom)
+
+  # Get coordinates for specific chain
+  chain_a_atoms = structure.get_atoms_by_chain('A') 
+  if chain_a_atoms:
+    print(f"\nNumber of atoms in chain A: {len(chain_a_atoms)}")
