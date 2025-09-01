@@ -1,0 +1,103 @@
+import numpy as np
+from Bio import Align
+from Bio.Align import substitution_matrices
+
+# Load BLOSUM62 matrix as an Array (subclass of numpy array)
+blosum62 = substitution_matrices.load("BLOSUM62")
+
+# Compute the background frequencies for a given sequence
+def compute_background_frequencies(seq):
+  freq = {}
+  total_count = len(seq)
+  for aa in seq:
+    if aa in freq:
+      freq[aa] += 1
+    else:
+      freq[aa] = 1
+  for aa in freq:
+    freq[aa] /= total_count # Normalize to get frequency
+  return freq
+
+# Compute C_ij for two sequences
+def compute_observed_counts(seq1, seq2):
+  C_ij = {}
+  for aa1 in seq1:
+    for aa2 in seq2:
+      pair = (aa1, aa2)
+      if pair in C_ij:
+        C_ij[pair] += 1
+      else:
+        C_ij[pair] = 1
+  return C_ij
+
+# Compute q_ij
+def compute_q_ij(C_ij, seq1_len, seq2_len):
+  q_ij = {}
+  total_possible_alignments = seq1_len * seq2_len
+  for pair, count in C_ij.items():
+    q_ij[pair] = count / total_possible_alignments
+  return q_ij
+
+# Compute e_ij from background frequencies
+def compute_e_ij(e_i, e_j):
+  e_ij = {}
+  for aa1 in e_i:
+    for aa2 in e_j:
+      e_ij[(aa1, aa2)] = e_i[aa1] * e_j[aa2]
+  return e_ij
+
+# Compute substitution scores s_ij using log-odds
+def compute_s_ij(q_ij, e_ij, lamda=1):
+  s_ij = {}
+  for pair in q_ij:
+    if pair in e_ij and e_ij[pair] > 0: # Ensure we don't divide by zero
+      s_ij[pair] = lamda * np.log(q_ij[pair] / e_ij[pair])
+    else:
+      s_ij[pair] = float('-inf') # Assign very low score for impossible pairs
+  return s_ij
+
+# Align the sequences using BLOSUM62 with gap penalty = -10
+def align_sequences(seq1, seq2, gap_score=-10):
+  aligner = Align.PairwiseAligner()
+  aligner.substitution_matrix = blosum62 # Use the Array class for BLOSUM62
+  aligner.open_gap_score = gap_score
+  aligner.extend_gap_score = gap_score
+  alignment = aligner.align(seq1, seq2)
+  return alignment
+
+# Main function
+def main(seq1, seq2):
+  # Compute background frequencies e_i and e_j
+  e_i = compute_background_frequencies(seq1)
+  e_j = compute_background_frequencies(seq2)
+
+  # Compute observed counts C_ij
+  C_ij = compute_observed_counts(seq1, seq2)
+
+  # Compute q_ij
+  q_ij = compute_q_ij(C_ij, len(seq1), len(seq2))
+
+  # Compute e_ij
+  e_ij = compute_e_ij(e_i, e_j)
+
+  # Compute substitution scores s_ij
+  s_ij = compute_s_ij(q_ij, e_ij)
+
+  # Align sequences using BLOSUM62 matrix
+  alignment = align_sequences(seq1, seq2)
+
+  # Output results
+  print("C_ij:", C_ij)
+  print("q_ij:", q_ij)
+  print("e_i:", e_i)
+  print("e_j:", e_j)
+  print("e_ij:", e_ij)
+  print("s_ij:", s_ij)
+  print("\nAlignment:")
+  print(alignment[0])
+
+# Example usage
+seq1 = "MELVSE"
+seq2 = "MEIVSE"
+
+main(seq1, seq2)
